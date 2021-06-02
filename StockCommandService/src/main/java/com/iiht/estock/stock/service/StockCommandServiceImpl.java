@@ -9,6 +9,7 @@ import com.iiht.estock.stock.model.Stock;
 import com.iiht.estock.stock.repository.StockCommandRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.log4j.Log4j2;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -25,12 +26,15 @@ public class StockCommandServiceImpl implements StockCommandService {
     private final KafkaAddStockEventSourcing kafkaAddStockEventSourcing;
     private final KafkaDeleteStockEventSourcing kafkaDeleteStockEventSourcing;
 
+    @Value(value = "#{environment['COMPANY_SERVICE'] ?: 'http://localhost:8089'}")
+    private String companyServiceEndpoint;
+
     @Override
     public AddStockEvent addStock(Stock stock) throws StockNotCreatedException {
         try {
             log.info("Adding stock price for company {} in db...", stock.getCompanyCode());
             stock.setStockCreatedDate(LocalDateTime.now());
-            Company company = restTemplate.getForEntity("http://company-service:8089/api/v1.0/market/company/info/" + stock.getCompanyCode(), Company.class).getBody();
+            Company company = getCompanyByCompanyCode(stock.getCompanyCode());
             if (company != null) {
                 stockCommandRepository.save(stock);
                 return kafkaAddStockEventSourcing.publicAddStockEvent(stock);
@@ -58,5 +62,10 @@ public class StockCommandServiceImpl implements StockCommandService {
             stockCommandRepository.save(stockPrice);
         }
         return true;
+    }
+
+    private Company getCompanyByCompanyCode(Long companyCode) {
+        return restTemplate.getForEntity(companyServiceEndpoint + "/api/v1.0/market/company/info/" + companyCode,
+                Company.class).getBody();
     }
 }

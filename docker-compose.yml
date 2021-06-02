@@ -119,6 +119,8 @@ services:
     environment:
       LOGGING_FILE_NAME: /logs-company/company-service.log
       EUREKA_SERVER: http://eureka-service:8761/eureka
+      STOCK_QUERY_SERVICE: http://stock-query-service:8091
+      STOCK_COMMAND_SERVICE: http://stock-command-service:8090
       COMPANY_DATASOURCE_URL: jdbc:mysql://company-mysql-db:3306/companyDb?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
       COMPANY_DATASOURCE_USERNAME: appUser
       COMPANY_DATASOURCE_PASSWORD: appPass
@@ -148,6 +150,7 @@ services:
     environment:
       LOGGING_FILE_NAME: /logs-stock/stock-command-service.log
       EUREKA_SERVER: http://eureka-service:8761/eureka
+      COMPANY_SERVICE: http://company-service:8089
       STOCK_DB: stock
       STOCK_USER: appUser
       STOCK_PASS: appPass

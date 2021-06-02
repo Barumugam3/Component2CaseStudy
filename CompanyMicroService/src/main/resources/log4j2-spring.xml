@@ -2,7 +2,7 @@
 <Configuration status="info" name="company-service-kafka-log" packages="com.iiht.estock.company">
     <Appenders>
         <Kafka name="Kafka" topic="company-service-logs">
-            <PatternLayout pattern="%date %message" />
+            <PatternLayout pattern="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} %M(%C{1}:%L) - %msg" />
             <Property name="bootstrap.servers">kafka-service:29092</Property>
         </Kafka>
         <Async name="Async">
@@ -10,11 +10,11 @@
         </Async>
 
         <Console name="stdout" target="SYSTEM_OUT" follow="true">
-            <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5p [%-7t] %F:%L - %m%n" />
+            <PatternLayout pattern="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} %M(%C{1}:%L) - %msg%n" />
         </Console>
 
         <File name="fileLog" fileName="/logs-company/company-service.log">
-            <PatternLayout pattern="%d{HH:mm:ss.SSS} %-5p [%-7t] %F:%L - %m%n" />
+            <PatternLayout pattern="[%-5level] %d{yyyy-MM-dd HH:mm:ss.SSS} %M(%C{1}:%L) - %msg%n" />
         </File>
     </Appenders>
     <Loggers>
@@ -24,5 +24,7 @@
             <AppenderRef ref="fileLog" />
         </Root>
         <Logger name="org.apache.kafka" level="WARN" />
+        <Logger name="org.springframework" level="WARN" />
+        <Logger name="org.hibernate" level="WARN" />
     </Loggers>
 </Configuration>
