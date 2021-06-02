@@ -1,0 +1,28 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: company-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ['company-service:8089']
+
+  - job_name: stock-command-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ['stock-command-service:8090']
+
+  - job_name: edge-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ['edge-service:8092']
+
+  - job_name: stock-query-service
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ['stock-query-service:8091']

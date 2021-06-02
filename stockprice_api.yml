@@ -1,0 +1,136 @@
+openapi: 3.0.3
+info:
+  title: Api Documentation
+  description: Api Documentation
+  termsOfService: 'urn:tos'
+  contact: {}
+  license:
+    name: Apache 2.0
+    url: 'http://www.apache.org/licenses/LICENSE-2.0'
+  version: '1.0'
+servers:
+  - url: 'http://localhost:8090'
+    description: Inferred Url
+tags:
+  - name: StockPrice
+    description: Stock Price Resource
+paths:
+  '/api/v1.0/market/stock/add/{companycode}':
+    post:
+      tags:
+        - StockPrice
+      summary: Add stock price by Company Code
+      operationId: addStockPriceByCompanyCodeUsingPOST
+      parameters:
+        - name: companycode
+          in: path
+          description: Company Code
+          required: true
+          style: simple
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StockPrice'
+      responses:
+        '201':
+          description: Successful Operation
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/StockPrice'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '500':
+          description: Stock price not created
+  '/api/v1.0/market/stock/get/{companycode}/{startdate}/{enddate}':
+    get:
+      tags:
+        - StockPrice
+      summary: Get stock price by company code between date range
+      operationId: getStockByCompanyBetweenDatesUsingGET
+      parameters:
+        - name: companycode
+          in: path
+          description: Company Code
+          required: true
+          style: simple
+          schema:
+            type: integer
+            format: int64
+        - name: startdate
+          in: path
+          description: Start Date
+          required: true
+          style: simple
+          schema:
+            type: string
+        - name: enddate
+          in: path
+          description: End Date
+          required: true
+          style: simple
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successful Operation
+          content:
+            '*/*':
+              schema:
+                $ref: '#/components/schemas/StockPriceDTO'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Stock price Not Found
+components:
+  schemas:
+    StockPrice:
+      title: StockPrice
+      type: object
+      properties:
+        companyCode:
+          type: integer
+          description: company code of the company
+          format: int64
+          example: 11111
+        stockCreatedDate:
+          type: string
+          description: creation date of the stock price
+          format: date
+          example: '2021-04-22T00:00:00.000+00:00'
+        stockId:
+          type: integer
+          description: id of the stock price
+          format: int64
+          example: 1
+        stockPrice:
+          type: integer
+          description: stock price
+          format: int64
+    StockPriceDTO:
+      title: StockPriceDTO
+      type: object
+      properties:
+        avgStockPrice:
+          type: integer
+          format: int64
+        maxStockPrice:
+          type: integer
+          format: int64
+        minStockPrice:
+          type: integer
+          format: int64
+        stockPrices:
+          type: array
+          items:
+            $ref: '#/components/schemas/StockPrice'

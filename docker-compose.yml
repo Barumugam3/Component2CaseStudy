@@ -1,0 +1,331 @@
+version: '3.9'
+
+# Services
+services:
+  eureka-service:
+    build:
+      context: ./DiscoveryMicroService
+      dockerfile: Dockerfile
+    image: eureka-service:v1
+    container_name: eureka-service
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    ports:
+      - 8761:8761
+    networks:
+      - backend
+
+  edge-service:
+    build:
+      context: ./EdgeMicroService
+      dockerfile: Dockerfile
+    image: edge-service:v1
+    container_name: edge-service
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    ports:
+      - 8092:8092
+    depends_on:
+      - eureka-service
+      - auth-service
+    environment:
+      EUREKA_SERVER: http://eureka-service:8761/eureka
+    networks:
+      - backend
+
+  auth-service:
+    build:
+      context: ./AuthMicroService
+      dockerfile: Dockerfile
+    image: auth-service:v1
+    container_name: auth-service
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    ports:
+      - 8093:8093
+    depends_on:
+      - eureka-service
+    environment:
+      EUREKA_SERVER: http://eureka-service:8761/eureka
+    networks:
+      - backend
+
+  zookeeper-service:
+    image: zookeeper:latest
+    hostname: zookeeper-host
+    container_name: zookeeper-service
+    ports:
+      - 2181:2181
+    networks:
+      - backend
+    environment:
+      ZOO_MY_ID: 1
+      ZOO_SERVERS: server.1=0.0.0.0:2888:3888;2181
+    volumes:
+      - /logs/zk-single-kafka-single/zookeeper-service/data:/data
+      - /logs/zk-single-kafka-single/zookeeper-service/datalog:/datalog
+
+  kafka-service:
+    image: confluentinc/cp-kafka:latest
+    hostname: kafka-host
+    container_name: kafka-service
+    ports:
+      - 29092:29092
+    environment:
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-host:9092,PLAINTEXT_HOST://kafka-service:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_CREATE_TOPICS: add-stock:2:1,delete-stock:2:1,stock-query-service-logs:2:1,stock-command-service-logs:2:1,company-service-logs:2:1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper-service:2181
+      KAFKA_BROKER_ID: 1
+      KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      - /logs/zk-single-kafka-single/kafka-host/data:/var/lib/kafka/data
+    depends_on:
+      - zookeeper-service
+    networks:
+      - backend
+    healthcheck:
+      test: [ "CMD", "nc", "-vz", "localhost", "29092" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  company-service:
+    build:
+      context: ./CompanyMicroService
+      dockerfile: Dockerfile
+    image: company-service:v1
+    container_name: company-service
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    ports:
+      - 8089:8089
+    restart: always
+    depends_on:
+      - eureka-service
+      - edge-service
+      - company-mysql-db
+      - kafka-service
+    environment:
+      LOGGING_FILE_NAME: /logs-company/company-service.log
+      EUREKA_SERVER: http://eureka-service:8761/eureka
+      COMPANY_DATASOURCE_URL: jdbc:mysql://company-mysql-db:3306/companyDb?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC&useLegacyDatetimeCode=false
+      COMPANY_DATASOURCE_USERNAME: appUser
+      COMPANY_DATASOURCE_PASSWORD: appPass
+    networks:
+      - backend
+    volumes:
+      - /logs:/logs-company
+
+  stock-command-service:
+    build:
+      context: ./StockCommandService
+      dockerfile: Dockerfile
+    image: stock-command-service:v1
+    container_name: stock-command-service
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    ports:
+      - 8090:8090
+    restart: always
+    depends_on:
+      - eureka-service
+      - edge-service
+      - stock-command-mongo-db
+      - kafka-service
+    environment:
+      LOGGING_FILE_NAME: /logs-stock/stock-command-service.log
+      EUREKA_SERVER: http://eureka-service:8761/eureka
+      STOCK_DB: stock
+      STOCK_USER: appUser
+      STOCK_PASS: appPass
+      STOCK_PORT: 27017
+      STOCK_HOST: stock-command-mongo-db
+      KAFKA_SERVER: kafka-service:29092
+      CONSUMER_GROUP: stock-consumer-group
+    networks:
+      - backend
+    volumes:
+      - /logs:/logs-stock
+
+  stock-query-service:
+    build:
+      context: ./StockQueryService
+      dockerfile: Dockerfile
+    image: stock-query-service:v1
+    container_name: stock-query-service
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    ports:
+      - 8091:8091
+    restart: always
+    depends_on:
+      - eureka-service
+      - edge-service
+      - stock-query-mongo-db
+      - kafka-service
+    environment:
+      LOGGING_FILE_NAME: /logs-stock/stock-query-service.log
+      EUREKA_SERVER: http://eureka-service:8761/eureka
+      STOCK_DB: stock
+      STOCK_USER: appUser
+      STOCK_PASS: appPass
+      STOCK_PORT: 27017
+      STOCK_HOST: stock-query-mongo-db
+      KAFKA_SERVER: kafka-service:29092
+      CONSUMER_GROUP: stock-consumer-group
+    networks:
+      - backend
+    volumes:
+      - /logs:/logs-stock
+
+  company-mysql-db:
+    image: mysql:latest
+    container_name: company-mysql-db
+    ports:
+      - 3308:3306
+    environment:
+      MYSQL_DATABASE: companyDb
+      MYSQL_USER: appUser
+      MYSQL_PASSWORD: appPass
+      MYSQL_ROOT_PASSWORD: rootPass
+    volumes:
+      - company-db-data:/var/lib/mysql
+    networks:
+      - backend
+
+  stock-command-mongo-db:
+    image: mongo:latest
+    container_name: stock-command-mongo-db
+    ports:
+      - 27019:27017
+    environment:
+      MONGO_INITDB_DATABASE: stock
+      MONGO_INITDB_ROOT_USERNAME: appUser
+      MONGO_INITDB_ROOT_PASSWORD: appPass
+    volumes:
+      - ./mongo-init-stock.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - backend
+
+  stock-query-mongo-db:
+    image: mongo:latest
+    container_name: stock-query-mongo-db
+    ports:
+      - 27020:27017
+    environment:
+      MONGO_INITDB_DATABASE: stock
+      MONGO_INITDB_ROOT_USERNAME: appUser
+      MONGO_INITDB_ROOT_PASSWORD: appPass
+    volumes:
+      - ./mongo-init-stock.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - backend
+
+  # management
+
+  grafana-service:
+    build:
+      context: ./MicroServiceManagement/grafana
+      dockerfile: Dockerfile
+    image: grafana-service
+    container_name: grafana-service
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    ports:
+      - 3000:3000
+    networks:
+      - backend
+
+  prometheus-service:
+    build:
+      context: ./MicroServiceManagement/prometheus
+      dockerfile: Dockerfile
+    image: prometheus-service
+    container_name: prometheus-service
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    ports:
+      - 9091:9090
+    networks:
+      - backend
+
+  # ELK Stack
+  elasticsearch-service:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.13.0
+    container_name: elasticsearch-service
+    ports: 
+      - 9200:9200
+      - 9300:9300
+    environment: 
+      discovery.type: single-node
+      ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+    networks: 
+      - backend
+    depends_on: 
+      - kafka-service
+  
+  kibana-service:
+    image: docker.elastic.co/kibana/kibana:7.13.0
+    container_name: kibana-service
+    ports: 
+      - 5601:5601
+    networks: 
+      - backend
+    depends_on: 
+      - elasticsearch-service
+    volumes: 
+      - type: bind
+        source: ./kibana/config/kibana.yml
+        target: /usr/share/kibana/config/kibana.yml
+        read_only: true
+    
+  logstash-service:
+    image: docker.elastic.co/logstash/logstash:7.13.0
+    container_name: logstash-service
+    ports: 
+      - "5000:5000/tcp"
+      - "5000:5000/udp"
+      - "9600:9600"
+    environment: 
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+    volumes: 
+      - type: bind
+        source: ./logstash/config/logstash.yml
+        target: /usr/share/logstash/config/logstash.yml
+        read_only: true
+      - type: bind
+        source: ./logstash/pipeline
+        target: /usr/share/logstash/pipeline
+        read_only: true
+    networks: 
+      - backend
+    depends_on: 
+      - elasticsearch-service
+
+# Volumes
+volumes:
+  company-db-data:
+  logs:
+
+# Network
+networks:
+  backend:
