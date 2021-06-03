@@ -6,7 +6,7 @@ services:
     build:
       context: ./DiscoveryMicroService
       dockerfile: Dockerfile
-    image: eureka-service:v1
+    image: akhilgandhilive/emarket:eureka-service
     container_name: eureka-service
     deploy:
       resources:
@@ -21,7 +21,7 @@ services:
     build:
       context: ./EdgeMicroService
       dockerfile: Dockerfile
-    image: edge-service:v1
+    image: akhilgandhilive/emarket:edge-service
     container_name: edge-service
     deploy:
       resources:
@@ -41,14 +41,14 @@ services:
     build:
       context: ./AuthMicroService
       dockerfile: Dockerfile
-    image: auth-service:v1
+    image: akhilgandhilive/emarket:auth-service
     container_name: auth-service
     deploy:
       resources:
         limits:
           memory: 256M
     ports:
-      - 8093:8093
+      - :8093
     depends_on:
       - eureka-service
     environment:
@@ -68,8 +68,8 @@ services:
       ZOO_MY_ID: 1
       ZOO_SERVERS: server.1=0.0.0.0:2888:3888;2181
     volumes:
-      - /logs/zk-single-kafka-single/zookeeper-service/data:/data
-      - /logs/zk-single-kafka-single/zookeeper-service/datalog:/datalog
+      - logs-zk-data:/data
+      - logs-zk-datalog:/datalog
 
   kafka-service:
     image: confluentinc/cp-kafka:latest
@@ -87,7 +87,7 @@ services:
       KAFKA_LOG4J_LOGGERS: "kafka.controller=INFO,kafka.producer.async.DefaultEventHandler=INFO,state.change.logger=INFO"
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     volumes:
-      - /logs/zk-single-kafka-single/kafka-host/data:/var/lib/kafka/data
+      - logs-kafka:/var/lib/kafka/data
     depends_on:
       - zookeeper-service
     networks:
@@ -102,7 +102,7 @@ services:
     build:
       context: ./CompanyMicroService
       dockerfile: Dockerfile
-    image: company-service:v1
+    image: akhilgandhilive/emarket:company-service
     container_name: company-service
     deploy:
       resources:
@@ -126,14 +126,12 @@ services:
       COMPANY_DATASOURCE_PASSWORD: appPass
     networks:
       - backend
-    volumes:
-      - /logs:/logs-company
 
   stock-command-service:
     build:
       context: ./StockCommandService
       dockerfile: Dockerfile
-    image: stock-command-service:v1
+    image: akhilgandhilive/emarket:stock-command-service
     container_name: stock-command-service
     deploy:
       resources:
@@ -160,14 +158,12 @@ services:
       CONSUMER_GROUP: stock-consumer-group
     networks:
       - backend
-    volumes:
-      - /logs:/logs-stock
 
   stock-query-service:
     build:
       context: ./StockQueryService
       dockerfile: Dockerfile
-    image: stock-query-service:v1
+    image: akhilgandhilive/emarket:stock-query-service
     container_name: stock-query-service
     deploy:
       resources:
@@ -193,59 +189,56 @@ services:
       CONSUMER_GROUP: stock-consumer-group
     networks:
       - backend
-    volumes:
-      - /logs:/logs-stock
 
   company-mysql-db:
     image: mysql:latest
     container_name: company-mysql-db
     ports:
-      - 3308:3306
+      - :3306
     environment:
       MYSQL_DATABASE: companyDb
       MYSQL_USER: appUser
       MYSQL_PASSWORD: appPass
       MYSQL_ROOT_PASSWORD: rootPass
-    volumes:
-      - company-db-data:/var/lib/mysql
     networks:
       - backend
 
   stock-command-mongo-db:
-    image: mongo:latest
+    build:
+      context: ./MicroServiceManagement/mongoDb
+      dockerfile: Dockerfile
+    image: akhilgandhilive/emarket:stock-command-mongo-db
     container_name: stock-command-mongo-db
     ports:
-      - 27019:27017
+      - :27017
     environment:
       MONGO_INITDB_DATABASE: stock
       MONGO_INITDB_ROOT_USERNAME: appUser
       MONGO_INITDB_ROOT_PASSWORD: appPass
-    volumes:
-      - ./mongo-init-stock.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     networks:
       - backend
 
   stock-query-mongo-db:
-    image: mongo:latest
+    build:
+      context: ./MicroServiceManagement/mongoDb
+      dockerfile: Dockerfile
+    image: akhilgandhilive/emarket:stock-query-mongo-db
     container_name: stock-query-mongo-db
     ports:
-      - 27020:27017
+      - :27017
     environment:
       MONGO_INITDB_DATABASE: stock
       MONGO_INITDB_ROOT_USERNAME: appUser
       MONGO_INITDB_ROOT_PASSWORD: appPass
-    volumes:
-      - ./mongo-init-stock.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     networks:
       - backend
 
-  # management
-
+  # Management
   grafana-service:
     build:
       context: ./MicroServiceManagement/grafana
       dockerfile: Dockerfile
-    image: grafana-service
+    image: akhilgandhilive/emarket:grafana-service
     container_name: grafana-service
     deploy:
       resources:
@@ -260,14 +253,14 @@ services:
     build:
       context: ./MicroServiceManagement/prometheus
       dockerfile: Dockerfile
-    image: prometheus-service
+    image: akhilgandhilive/emarket:prometheus-service
     container_name: prometheus-service
     deploy:
       resources:
         limits:
           memory: 256M
     ports:
-      - 9091:9090
+      - 9090:9090
     networks:
       - backend
 
@@ -287,7 +280,10 @@ services:
       - kafka-service
   
   kibana-service:
-    image: docker.elastic.co/kibana/kibana:7.13.0
+    build:
+      context: ./ELKStack/kibana
+      dockerfile: Dockerfile
+    image: akhilgandhilive/emarket:kibana-service
     container_name: kibana-service
     ports: 
       - 5601:5601
@@ -295,30 +291,18 @@ services:
       - backend
     depends_on: 
       - elasticsearch-service
-    volumes: 
-      - type: bind
-        source: ./kibana/config/kibana.yml
-        target: /usr/share/kibana/config/kibana.yml
-        read_only: true
     
   logstash-service:
-    image: docker.elastic.co/logstash/logstash:7.13.0
+    build:
+      context: ./ELKStack/logstash
+    image: akhilgandhilive/emarket:logstash-service
     container_name: logstash-service
     ports: 
-      - "5000:5000/tcp"
-      - "5000:5000/udp"
-      - "9600:9600"
+      - 5000:5000/tcp
+      - 5000:5000/udp
+      - 9600:9600
     environment: 
       LS_JAVA_OPTS: "-Xmx256m -Xms256m"
-    volumes: 
-      - type: bind
-        source: ./logstash/config/logstash.yml
-        target: /usr/share/logstash/config/logstash.yml
-        read_only: true
-      - type: bind
-        source: ./logstash/pipeline
-        target: /usr/share/logstash/pipeline
-        read_only: true
     networks: 
       - backend
     depends_on: 
@@ -326,8 +310,9 @@ services:
 
 # Volumes
 volumes:
-  company-db-data:
-  logs:
+  logs-zk-data:
+  logs-zk-datalog:
+  logs-kafka:
 
 # Network
 networks:
