@@ -225,7 +225,7 @@ services:
     image: akhilgandhilive/emarket:stock-query-mongo-db
     container_name: stock-query-mongo-db
     ports:
-      - 27109:27019
+      - 27019:27019
     environment:
       MONGO_INITDB_DATABASE: stock
       MONGO_INITDB_ROOT_USERNAME: appUser
@@ -298,7 +298,7 @@ services:
     image: akhilgandhilive/emarket:logstash-service
     container_name: logstash-service
     ports: 
-      - 5000:5000/tcp
+      - 5001:5001/tcp
       - 5000:5000/udp
       - 9600:9600
     environment: 
