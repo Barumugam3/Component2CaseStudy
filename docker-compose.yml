@@ -13,7 +13,7 @@ services:
         limits:
           memory: 256M
     ports:
-      - 8761:8761
+      - :8761
     networks:
       - backend
 
@@ -48,7 +48,7 @@ services:
         limits:
           memory: 256M
     ports:
-      - 8093:8093
+      - :8093
     depends_on:
       - eureka-service
     environment:
@@ -61,7 +61,7 @@ services:
     hostname: zookeeper-host
     container_name: zookeeper-service
     ports:
-      - 2181:2181
+      - :2181
     networks:
       - backend
     environment:
@@ -76,7 +76,7 @@ services:
     hostname: kafka-host
     container_name: kafka-service
     ports:
-      - 29092:29092
+      - :29092
     environment:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-host:9092,PLAINTEXT_HOST://kafka-service:29092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
@@ -109,7 +109,7 @@ services:
         limits:
           memory: 256M
     ports:
-      - 8089:8089
+      - :8089
     restart: always
     depends_on:
       - eureka-service
@@ -138,7 +138,7 @@ services:
         limits:
           memory: 256M
     ports:
-      - 8090:8090
+      - :8090
     restart: always
     depends_on:
       - eureka-service
@@ -152,7 +152,7 @@ services:
       STOCK_DB: stock
       STOCK_USER: appUser
       STOCK_PASS: appPass
-      STOCK_PORT: 27017
+      STOCK_PORT: 27020
       STOCK_HOST: stock-command-mongo-db
       KAFKA_SERVER: kafka-service:29092
       CONSUMER_GROUP: stock-consumer-group
@@ -170,7 +170,7 @@ services:
         limits:
           memory: 256M
     ports:
-      - 8091:8091
+      - :8091
     restart: always
     depends_on:
       - eureka-service
@@ -183,7 +183,7 @@ services:
       STOCK_DB: stock
       STOCK_USER: appUser
       STOCK_PASS: appPass
-      STOCK_PORT: 27017
+      STOCK_PORT: 27021
       STOCK_HOST: stock-query-mongo-db
       KAFKA_SERVER: kafka-service:29092
       CONSUMER_GROUP: stock-consumer-group
@@ -194,7 +194,7 @@ services:
     image: mysql:latest
     container_name: company-mysql-db
     ports:
-      - 3306:3306
+      - :3306
     environment:
       MYSQL_DATABASE: companyDb
       MYSQL_USER: appUser
@@ -206,30 +206,32 @@ services:
   stock-command-mongo-db:
     build:
       context: ./MicroServiceManagement/mongoDb
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile-command
     image: akhilgandhilive/emarket:stock-command-mongo-db
     container_name: stock-command-mongo-db
     ports:
-      - 27018:27018
+      - :27020
     environment:
       MONGO_INITDB_DATABASE: stock
-      MONGO_INITDB_ROOT_USERNAME: appUser
-      MONGO_INITDB_ROOT_PASSWORD: appPass
+      MONGO_INITDB_ROOT_USERNAME: adminUser
+      MONGO_INITDB_ROOT_PASSWORD: adminUser
+    command: ["-f","/etc/mongod.conf"]
     networks:
       - backend
 
   stock-query-mongo-db:
     build:
       context: ./MicroServiceManagement/mongoDb
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile-query
     image: akhilgandhilive/emarket:stock-query-mongo-db
     container_name: stock-query-mongo-db
     ports:
-      - 27019:27019
+      - :27021
     environment:
       MONGO_INITDB_DATABASE: stock
-      MONGO_INITDB_ROOT_USERNAME: appUser
-      MONGO_INITDB_ROOT_PASSWORD: appPass
+      MONGO_INITDB_ROOT_USERNAME: adminUser
+      MONGO_INITDB_ROOT_PASSWORD: adminPass
+    command: ["-f","/etc/mongod.conf"]
     networks:
       - backend
 

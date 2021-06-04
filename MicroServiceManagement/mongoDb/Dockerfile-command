@@ -1,0 +1,3 @@
+FROM mongo:latest
+ADD mongo-init-stock.js /docker-entrypoint-initdb.d/mongo-init.js
+ADD ./mongo-command.conf /etc/mongod.conf
