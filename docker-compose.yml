@@ -6,7 +6,7 @@ services:
     build:
       context: ./DiscoveryMicroService
       dockerfile: Dockerfile
-    image: akhilgandhilive/emarket:eureka-service
+    image: balaji/emarket:eureka-service
     container_name: eureka-service
     deploy:
       resources:
@@ -21,7 +21,7 @@ services:
     build:
       context: ./EdgeMicroService
       dockerfile: Dockerfile
-    image: akhilgandhilive/emarket:edge-service
+    image: balaji/emarket:edge-service
     container_name: edge-service
     deploy:
       resources:
@@ -41,7 +41,7 @@ services:
     build:
       context: ./AuthMicroService
       dockerfile: Dockerfile
-    image: akhilgandhilive/emarket:auth-service
+    image: balaji/emarket:auth-service
     container_name: auth-service
     deploy:
       resources:
@@ -131,7 +131,7 @@ services:
     build:
       context: ./StockCommandService
       dockerfile: Dockerfile
-    image: akhilgandhilive/emarket:stock-command-service
+    image: balaji/emarket:stock-command-service
     container_name: stock-command-service
     deploy:
       resources:
@@ -207,7 +207,7 @@ services:
     build:
       context: ./MicroServiceManagement/mongoDb
       dockerfile: Dockerfile-command
-    image: akhilgandhilive/emarket:stock-command-mongo-db
+    image: balaji/emarket:stock-command-mongo-db
     container_name: stock-command-mongo-db
     ports:
       - :27020
@@ -223,7 +223,7 @@ services:
     build:
       context: ./MicroServiceManagement/mongoDb
       dockerfile: Dockerfile-query
-    image: akhilgandhilive/emarket:stock-query-mongo-db
+    image: balaji/emarket:stock-query-mongo-db
     container_name: stock-query-mongo-db
     ports:
       - :27021
@@ -240,7 +240,7 @@ services:
     build:
       context: ./MicroServiceManagement/grafana
       dockerfile: Dockerfile
-    image: akhilgandhilive/emarket:grafana-service
+    image: balaji/emarket:grafana-service
     container_name: grafana-service
     deploy:
       resources:
@@ -255,7 +255,7 @@ services:
     build:
       context: ./MicroServiceManagement/prometheus
       dockerfile: Dockerfile
-    image: akhilgandhilive/emarket:prometheus-service
+    image: balaji/emarket:prometheus-service
     container_name: prometheus-service
     deploy:
       resources:
@@ -285,7 +285,7 @@ services:
     build:
       context: ./ELKStack/kibana
       dockerfile: Dockerfile
-    image: akhilgandhilive/emarket:kibana-service
+    image: balaji/emarket:kibana-service
     container_name: kibana-service
     ports: 
       - 5601:5601
@@ -297,7 +297,7 @@ services:
   logstash-service:
     build:
       context: ./ELKStack/logstash
-    image: akhilgandhilive/emarket:logstash-service
+    image: balaji/emarket:logstash-service
     container_name: logstash-service
     ports: 
       - 5001:5001/tcp
